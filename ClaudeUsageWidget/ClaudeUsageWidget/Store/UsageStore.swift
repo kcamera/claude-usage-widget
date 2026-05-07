@@ -82,12 +82,14 @@ final class UsageStore {
             let aggregator = WindowAggregator(weights: weights)
             let now = Date()
             let estimator = PercentEstimator(mode: mode, samples: samples)
-            let five = aggregator.summarize(events: events, now: now, window: .fiveHour) { totalW, perModelW in
+            let fiveRaw = aggregator.summarize(events: events, now: now, window: .fiveHour) { totalW, perModelW in
                 estimator.estimate(window: .fiveHour, weightedTokens: totalW, perModelWeighted: perModelW)
             }
-            let seven = aggregator.summarize(events: events, now: now, window: .sevenDay) { totalW, perModelW in
+            let sevenRaw = aggregator.summarize(events: events, now: now, window: .sevenDay) { totalW, perModelW in
                 estimator.estimate(window: .sevenDay, weightedTokens: totalW, perModelWeighted: perModelW)
             }
+            let five = Self.applyResetOverride(fiveRaw, override: estimator.epochResetsAt(window: .fiveHour, now: now))
+            let seven = Self.applyResetOverride(sevenRaw, override: estimator.epochResetsAt(window: .sevenDay, now: now))
             await MainActor.run {
                 self.allEvents = events
                 self.fiveHour = five
@@ -125,6 +127,20 @@ final class UsageStore {
         }
 
         return keyed.values.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    nonisolated private static func applyResetOverride(_ summary: WindowSummary, override: Date?) -> WindowSummary {
+        guard let override else { return summary }
+        return WindowSummary(
+            window: summary.window,
+            perModel: summary.perModel,
+            windowStart: summary.windowStart,
+            windowEnd: summary.windowEnd,
+            resetAt: override,
+            weightedTokens: summary.weightedTokens,
+            softPercent: summary.softPercent,
+            estimatorState: summary.estimatorState
+        )
     }
 
     nonisolated private static func eventKey(_ e: UsageEvent) -> String {
