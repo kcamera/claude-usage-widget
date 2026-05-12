@@ -82,10 +82,12 @@ final class UsageStore {
             let aggregator = WindowAggregator(weights: weights)
             let now = Date()
             let estimator = PercentEstimator(mode: mode, samples: samples)
-            let five = aggregator.summarize(events: events, now: now, window: .fiveHour) { totalW, perModelW in
+            let fiveResetsAt = estimator.epochResetsAt(window: .fiveHour, now: now)
+            let sevenResetsAt = estimator.epochResetsAt(window: .sevenDay, now: now)
+            let five = aggregator.summarize(events: events, now: now, window: .fiveHour, epochResetsAt: fiveResetsAt) { totalW, perModelW in
                 estimator.estimate(window: .fiveHour, weightedTokens: totalW, perModelWeighted: perModelW)
             }
-            let seven = aggregator.summarize(events: events, now: now, window: .sevenDay) { totalW, perModelW in
+            let seven = aggregator.summarize(events: events, now: now, window: .sevenDay, epochResetsAt: sevenResetsAt) { totalW, perModelW in
                 estimator.estimate(window: .sevenDay, weightedTokens: totalW, perModelWeighted: perModelW)
             }
             await MainActor.run {

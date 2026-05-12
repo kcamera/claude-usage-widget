@@ -28,12 +28,14 @@ enum WindowKind: String, Codable, Hashable, Sendable, CaseIterable {
 
 enum EstimatorState: Hashable, Sendable {
     case estimated
+    case calibratedAnchor(samples: Int)
     case calibratedScalar(samples: Int)
     case calibratedPerModel(samples: Int)
 
     var badgeText: String {
         switch self {
         case .estimated: "Estimated"
+        case .calibratedAnchor: "Calibrated (anchor only)"
         case .calibratedScalar(let n): "Calibrated (\(n))"
         case .calibratedPerModel(let n): "Calibrated · per-model (\(n))"
         }
@@ -42,7 +44,7 @@ enum EstimatorState: Hashable, Sendable {
     var sampleCount: Int {
         switch self {
         case .estimated: 0
-        case .calibratedScalar(let n), .calibratedPerModel(let n): n
+        case .calibratedAnchor(let n), .calibratedScalar(let n), .calibratedPerModel(let n): n
         }
     }
 }
